@@ -1,0 +1,670 @@
+---
+title: "Visualizando dados numéricos e categóricos"
+subtitle: "Encontros Síncronos 06"
+author: 
+  - <br></br>Renata Oliveira
+date: '23/02/21'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: ["xaringan-themer.css", "slides.css"]
+    nature:
+      ratio: "16:9"
+      highlightLines: true
+      highlightStyle: solarized-light
+      countIncrementalSlides: false
+      slideNumberFormat: |
+         <div class="progress-bar-container">
+           <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+           </div>
+         </div>
+
+---
+
+```{r child = "setup.Rmd"}
+```
+
+```{r packages, echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(openintro)
+loans_full_schema <- loans_full_schema %>%
+  mutate(grade = factor(grade, ordered = TRUE))
+```
+
+```{r xaringan-tile-view, echo=FALSE}
+xaringanExtra::use_tile_view()
+```
+
+```{r xaringan-editable, echo=FALSE}
+xaringanExtra::use_editable(expires = 1)
+```
+
+```{r xaringan-panelset, echo=FALSE, message=FALSE, warning=FALSE}
+xaringanExtra::use_panelset()
+xaringanExtra::style_panelset_tabs(panel_tab_font_family = "sans-serif")
+```
+
+```{r xaringanExtra-clipboard, echo=FALSE}
+htmltools::tagList(
+  xaringanExtra::use_clipboard(
+    button_text = "<i class=\"fa fa-clipboard\"></i>",
+    success_text = "<i class=\"fa fa-check\" style=\"color: #90BE6D\"></i>",
+    error_text = "<i class=\"fa fa-times-circle\" style=\"color: #F94144\"></i>"
+  ),
+  rmarkdown::html_dependency_font_awesome()
+)
+```
+
+```{r xaringan-fit-screen, echo=FALSE}
+xaringanExtra::use_fit_screen()
+```
+
+```{r xaringan-extra-styles, echo=FALSE}
+xaringanExtra::use_extra_styles(
+  hover_code_line = TRUE,         #<<
+  mute_unhighlighted_code = TRUE  #<<
+)
+```
+
+```{css include=FALSE}
+.panelset {
+   --panel-tab-foreground: currentColor;
+   --panel-tab-background: unset;
+   --panel-tab-active-foreground: currentColor;
+   --panel-tab-active-background: unset;
+   --panel-tab-active-border-color: currentColor;
+   --panel-tab-hover-foreground: currentColor;
+   --panel-tab-hover-background: unset;
+   --panel-tab-hover-border-color: currentColor;
+   --panel-tab-inactive-opacity: 0.5;
+   --panel-tabs-border-bottom: #ddd;
+   --panel-tab-font-family: Sen;
+   --panel-tab-background-color-active: #fffbe0;
+   --panel-tab-border-color-active: #023d4d;
+}
+
+.panelset .panel-tabs .panel-tab > a {
+	color: #023d4d;
+}
+
+.panelset .panel-tabs {
+  font-size: 0.5rem;
+}
+```
+
+
+class: center, middle
+
+## Retrospecto
+
+---
+
+## Modelo conceitual da análise de dados
+
+![Modelo de Data Science](https://retaoliveira.github.io/relements/figures/dataR.png)
+
+---
+
+## Tipos de dados
+
+- Os tipos de dados mais comuns são `character`, `numeric`, `factor`e `logical`.
+
+## Tipos de classes de objetos no R
+
+- As classes de organização dos dados mais comuns são `vector`, `list`, `matrix` e `dataframe`.
+
+
+---
+
+## RMarkdown
+
+```{r echo=FALSE, out.width="100%"}
+knitr::include_graphics("img/render.png")
+```
+.footnote[
+Alison Hill [Teaching in Production](https://rstudio-education.github.io/teaching-in-production/slides/index.html#1)
+]
+
+---
+
+## ggplot2
+
+- ggplot() é a função principal no ggplot2
+- As parcelas são construídas em camadas
+- A estrutura do código para as parcelas pode ser resumida como
+
+```{r eval = FALSE}
+ggplot(data = [dataset], 
+       mapping = aes(x = [x-variable], y = [y-variable])) +
+   geom_xxx() +
+   other options
+```
+
+---
+
+## Número de variáveis envolvidas
+
+- Análise univariada de dados - distribuição de uma única variável
+- Análise de dados bivariados - relação entre duas variáveis
+- Análise multivariada de dados - relação entre muitas variáveis ao mesmo tempo, geralmente focalizando a relação entre duas, enquanto condiciona para outras
+
+---
+
+## Tipos de variáveis
+
+- As variáveis **numéricas** podem ser classificadas como **contínuas** ou **discretas** considerenado se a variável pode ou não assumir um número infinito de valores ou apenas números inteiros não negativos, respectivamente.
+- Se a variável for **categórica**, podemos determinar se ela é **ordinal** tendo em conta se os níveis têm ou não uma ordenação natural.
+
+---
+
+class: middle
+
+# Dados
+
+---
+
+## Dados: Empréstimos
+
+- Milhares de empréstimos são feitos anualmente, que várias empresas, operando apenas por meio de plataformas digitais, permitem empréstimos de valores monetários para diferentes pessoas. 
+
+- Nem todos os empréstimos são autorizados e gerados de maneira igual - a facilidade de obter um empréstimo depende da capacidade (aparente) que o indivíduo tem de pagar o empréstimo
+
+- Os dados desta atividade são fictícios. 
+
+
+---
+
+## Dê uma olhada nos dados
+
+.small[
+```{r output.lines=18}
+library(openintro)
+glimpse(loans_full_schema)
+```
+]
+---
+
+## Variáveis selecionadas
+
+```{r}
+loans <- loans_full_schema %>%
+  select(loan_amount, interest_rate, term, grade, 
+         state, annual_income, homeownership, debt_to_income)
+glimpse(loans)
+```
+
+---
+
+## Variáveis selecionadas
+
+.midi[
+variável        | descrição
+----------------|-------------
+`loan_amount`   |	Montante do empréstimo recebido, em dólares americanos
+`interest_rate` |	Taxa de juros sobre o empréstimo, em uma porcentagem anual
+`term`	        | A duração do empréstimo, que é sempre definida como um número inteiro de meses
+`grade`	        | Grau de empréstimo, que leva um valor de A a G e representa a qualidade do empréstimo e sua probabilidade de ser reembolsado
+`state`         |	Estado americano onde o mutuário reside
+`annual_income` |	A renda anual do mutuário, incluindo qualquer segunda renda, em dólares americanos
+`homeownership`	| Indica se a pessoa possui imóvel, possui mas tem uma hipoteca, ou aluga
+`debt_to_income` | Índice da dívida em relação à renda
+]
+
+---
+
+## Tipos de variáveis
+
+variável        | tipo
+----------------|-------------
+`loan_amount`   |	numérica, contínua
+`interest_rate` |	numérica, contínua
+`term`	        | numérica, discreta
+`grade`	        | categórica, ordinal
+`state`         |	categórica, não ordinal
+`annual_income` |	numérica, contínua
+`homeownership`	| categórica, não ordinal
+`debt_to_income` | numérica, contínua
+
+---
+
+class: middle
+
+# Visualização de dados numéricos
+
+---
+
+## Descrevendo formas de distribuições numéricas
+
+- forma:
+    - skewness: right-skewed, left-skewed, simétrico (skew é o lado da cauda mais longa)
+    - modalidade: unimodal, bimodal, multimodal, uniforme
+- centro: média (`mean`), mediana (`median`)
+- dispersão: amplitude (`range`), desvio padrão (`sd`), intervalo interquartil (`IQR`)
+- observações inespecíficas
+
+---
+
+class: middle
+
+# Histograma
+
+---
+
+## Histograma
+
+```{r message = TRUE, out.width = "50%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_histogram()
+```
+
+---
+
+## Histograma and largura das classes (binwidth)
+
+.panelset[
+.panel[.panel-name[binwidth = 1000]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_histogram(binwidth = 1000)
+```
+]
+.panel[.panel-name[binwidth = 5000]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_histogram(binwidth = 5000)
+```
+]
+.panel[.panel-name[binwidth = 20000]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_histogram(binwidth = 20000)
+```
+]
+]
+
+---
+
+## Customizando histogramas
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "hist-custom", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Code]
+```{r hist-custom, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_histogram(binwidth = 5000) +
+  labs( #<<
+    x = "Valor do empréstimo ($)", #<<
+    y = "Frequência", #<<
+    title = "Quantidade de empréstimos" #<<
+  ) #<<
+```
+]
+]
+
+---
+
+## Preencher com uma variável categórica
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "hist-fill", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Código]
+```{r hist-fill, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = loan_amount, 
+                  fill = homeownership)) + #<<
+  geom_histogram(binwidth = 5000,
+                 alpha = 0.5) + #<<
+  labs(
+    x = "Valor do empréstimo ($)", 
+    y = "Frequência", 
+    title = "Quantidade de empréstimos"
+  )
+```
+]
+]
+
+---
+
+## Facet com uma variável categórica
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "hist-facet", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Code]
+```{r hist-facet, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = loan_amount, fill = homeownership)) + 
+  geom_histogram(binwidth = 5000) +
+  labs(
+    x = "Valor do empréstimo ($)", 
+    y = "Frequência", 
+    title = "Quantidade de empréstimos"
+  ) +
+  facet_wrap(~ homeownership, nrow = 3) #<<
+```
+]
+]
+
+---
+
+class: middle
+
+# Gráfico de densidade
+
+---
+
+## Gráfico de densidade
+
+```{r}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_density()
+```
+
+---
+
+## Gráfico de densidade e ajuste de bandwidth
+
+.panelset[
+.panel[.panel-name[adjust = 0.5]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_density(adjust = 0.5)
+```
+]
+.panel[.panel-name[adjust = 1]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_density(adjust = 1) # default bandwidth
+```
+]
+.panel[.panel-name[adjust = 2]
+```{r out.width = "40%"}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_density(adjust = 2)
+```
+]
+]
+
+---
+
+## Customizando gráficos de densidade
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "density-custom", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Código]
+```{r density-custom, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = loan_amount)) +
+  geom_density(adjust = 2) +
+  labs( #<<
+    x = "Valor do empréstimo ($)", 
+    y = "Densidade", 
+    title = "Quantidade de empréstimos"
+  ) #<<
+```
+]
+]
+
+---
+
+## Adicionando uma variável categórica
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "density-cat", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Código]
+```{r density-cat, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = loan_amount, 
+                  fill = homeownership)) + #<<
+  geom_density(adjust = 2, 
+               alpha = 0.5) + #<<
+  labs(
+    x = "Valor do empréstimo ($)", 
+    y = "Densidade",
+    title = "Quantidade de empréstimos", 
+    fill = "Posse de imóveis" #<<
+  )
+```
+]
+]
+
+---
+
+class: middle
+
+# Box plot
+
+---
+
+## Box plot
+
+```{r}
+ggplot(loans, aes(x = interest_rate)) +
+  geom_boxplot()
+```
+
+---
+
+## Box plot e outliers
+
+```{r}
+ggplot(loans, aes(x = annual_income)) +
+  geom_boxplot()
+```
+
+---
+
+## Customizando box plots
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "box-custom", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Códigos]
+```{r box-custom, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = interest_rate)) +
+  geom_boxplot() +
+  labs(
+    x = "Taxa de juros (%)",
+    y = NULL,
+    title = "Taxas de juros dos empréstimos"
+  ) +
+  theme( #<<
+    axis.ticks.y = element_blank(), #<<
+    axis.text.y = element_blank() #<<
+  ) #<<
+```
+]
+]
+
+---
+
+## Adicionando uma variável categórica
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "box-cat", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Código]
+```{r box-cat, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(x = interest_rate,
+                  y = grade)) + #<<
+  geom_boxplot() +
+  labs(
+    x = "Taxa de juros (%)",
+    y = "Graus de empréstimo",
+    title = "Taxas de juros dos empréstimos",
+    subtitle = "por graus de empréstimos" #<<
+  )
+```
+]
+]
+
+---
+
+class: middle
+
+# Relacionamentos variáveis numéricas
+
+---
+
+## Scatterplot
+
+```{r warning = FALSE}
+ggplot(loans, aes(x = debt_to_income, y = interest_rate)) +
+  geom_point()
+```
+
+---
+
+## Hex plot
+
+```{r warning = FALSE}
+ggplot(loans, aes(x = debt_to_income, y = interest_rate)) +
+  geom_hex()
+```
+
+---
+
+## Hex plot
+
+```{r warning = FALSE}
+ggplot(loans %>% filter(debt_to_income < 100), 
+       aes(x = debt_to_income, y = interest_rate)) +
+  geom_hex()
+```
+
+
+---
+
+### Dados 
+
+```{r}
+library(openintro)
+loans <- loans_full_schema %>%
+  select(loan_amount, interest_rate, term, grade, 
+         state, annual_income, homeownership, debt_to_income)
+glimpse(loans)
+```
+
+---
+
+class: middle
+
+# Gráfico de barras
+
+---
+
+## Gráfico de barras
+
+```{r}
+ggplot(loans, aes(x = homeownership)) +
+  geom_bar()
+```
+
+---
+
+## Gráfico de barras segmentado
+
+```{r}
+ggplot(loans, aes(x = homeownership, 
+                  fill = grade)) + #<<
+  geom_bar()
+```
+
+---
+
+## Gráfico de barras segmentado
+
+```{r}
+ggplot(loans, aes(x = homeownership, fill = grade)) +
+  geom_bar(position = "fill") #<<
+```
+
+---
+
+.question[
+Qual dos gráficos de barra é uma representação mais útil para visualizar a relação entre a propriedade de imóveis e o grau de empréstimo?
+]
+
+.pull-left[
+```{r echo=FALSE, out.width = "100%"}
+ggplot(loans, aes(x = homeownership, fill = grade)) +
+  geom_bar()
+```
+]
+.pull-right[
+```{r echo=FALSE, out.width = "100%"}
+ggplot(loans, aes(x = homeownership, fill = grade)) +
+  geom_bar(position = "fill")
+```
+]
+
+---
+
+## Customizando gráficos de barras
+
+.panelset[
+.panel[.panel-name[Plot]
+```{r ref.label = "bar-custom", echo = FALSE, warning = FALSE}
+```
+]
+.panel[.panel-name[Código]
+```{r bar-custom, fig.show = "hide", warning = FALSE}
+ggplot(loans, aes(y = homeownership, #<<
+                  fill = grade)) +
+  geom_bar(position = "fill") +
+  labs( #<<
+    x = "Proporção", #<<
+    y = "Propriedade de imóveis", #<<
+    fill = "Grau de empréstimo", #<<
+    title = "Graus de empréstimos", #<<
+    subtitle = "e propriedade de imóveis do mutuário" #<<
+  ) #<<
+```
+]
+]
+
+---
+
+class: middle
+
+# Relação entre variáveis numéricas e categóricas
+
+---
+
+## Já apresentado...
+
+- Histogramas e gráficos de densidade em cores e facets   
+- Box plots lado a lado
+
+---
+
+## Gráficos violino
+
+```{r warning = FALSE}
+ggplot(loans, aes(x = homeownership, y = loan_amount)) +
+  geom_violin()
+```
+
+---
+
+## Ridge plots
+
+```{r warning = FALSE}
+library(ggridges)
+ggplot(loans, aes(x = loan_amount, y = grade, fill = grade, color = grade)) + 
+  geom_density_ridges(alpha = 0.5)
+```
